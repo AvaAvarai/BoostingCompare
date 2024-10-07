@@ -2,13 +2,16 @@ import numpy as np
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import AdaBoostClassifier
-from sklearn.metrics import accuracy_score, roc_curve, auc
-from sklearn.preprocessing import label_binarize
+from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from pandas.plotting import parallel_coordinates
 import pandas as pd
 
+# Define a function to map numeric class labels to class names
+def map_class_names(labels):
+    class_map = {0: 'setosa', 1: 'versicolor', 2: 'virginica'}
+    return [class_map[label] for label in labels]
 
 if __name__ == "__main__":
     # Load the iris dataset
@@ -18,7 +21,6 @@ if __name__ == "__main__":
     # Get number of runs from user
     n_runs = int(input("Enter the number of runs: "))
     accuracies = []
-    roc_curves = []
     classifiers = []
 
     for _ in tqdm(range(n_runs), desc="Running iterations"):
@@ -34,77 +36,38 @@ if __name__ == "__main__":
         accuracy = accuracy_score(y_test, y_pred)
         accuracies.append(accuracy)
 
-        # Calculate ROC curve and AUC
-        y_test_bin = label_binarize(y_test, classes=[0, 1, 2])
-        y_score = clf.predict_proba(X_test)
-        fpr = dict()
-        tpr = dict()
-        roc_auc = dict()
-        for i in range(3):
-            fpr[i], tpr[i], _ = roc_curve(y_test_bin[:, i], y_score[:, i])
-            roc_auc[i] = auc(fpr[i], tpr[i])
-        roc_curves.append((fpr, tpr, roc_auc))
         classifiers.append((clf, X_train, y_train))
-
-    # Calculate statistics
-    min_accuracy = min(accuracies)
-    max_accuracy = max(accuracies)
-    avg_accuracy = np.mean(accuracies)
-    std_accuracy = np.std(accuracies)
 
     # Find best and worst runs
     best_run = np.argmax(accuracies)
     worst_run = np.argmin(accuracies)
 
-    # Print results
-    print(f"Min Accuracy: {min_accuracy:.4f}")
-    print(f"Max Accuracy: {max_accuracy:.4f}")
-    print(f"Average Accuracy: {avg_accuracy:.4f}")
-    print(f"Standard Deviation of Accuracies: {std_accuracy:.4f}")
+    # Plot parallel coordinates for the best run
+    plt.figure(figsize=(14, 7))
 
-    # Plot best and worst ROC curves
-    plt.figure(figsize=(20, 5))
-    
-    plt.subplot(131)
-    for i in range(3):
-        plt.plot(roc_curves[best_run][0][i], roc_curves[best_run][1][i], 
-                 label=f'ROC curve (class {i}) (AUC = {roc_curves[best_run][2][i]:.2f})')
-    plt.plot([0, 1], [0, 1], 'k--')
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title('Best ROC Curve')
-    plt.legend(loc="lower right")
-
-    plt.subplot(132)
-    for i in range(3):
-        plt.plot(roc_curves[worst_run][0][i], roc_curves[worst_run][1][i], 
-                 label=f'ROC curve (class {i}) (AUC = {roc_curves[worst_run][2][i]:.2f})')
-    plt.plot([0, 1], [0, 1], 'k--')
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title('Worst ROC Curve')
-    plt.legend(loc="lower right")
-
-    # Plot parallel coordinates for best and worst runs
-    plt.subplot(133)
     best_clf, best_X, best_y = classifiers[best_run]
+    best_y_named = map_class_names(best_y)  # Map class labels to names
+
+    # Create DataFrame for parallel coordinates for best classifier
+    df_best = pd.DataFrame(best_X, columns=['sepal length', 'sepal width', 'petal length', 'petal width'])
+    df_best['class'] = best_y_named
+
+    plt.subplot(121)
+    parallel_coordinates(df_best, 'class', color=('#1f77b4', '#ff7f0e', '#2ca02c'))  # Fixed class colors
+    plt.title('Parallel Coordinates: Best Decision Boundary')
+    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+
+    # Plot parallel coordinates for the worst run
     worst_clf, worst_X, worst_y = classifiers[worst_run]
+    worst_y_named = map_class_names(worst_y)  # Map class labels to names
 
-    # Combine best and worst data
-    combined_X = np.vstack((best_X, worst_X))
-    combined_y = np.concatenate([np.full(len(best_y), 'best'), np.full(len(worst_y), 'worst')])
+    # Create DataFrame for parallel coordinates for worst classifier
+    df_worst = pd.DataFrame(worst_X, columns=['sepal length', 'sepal width', 'petal length', 'petal width'])
+    df_worst['class'] = worst_y_named
 
-    # Create DataFrame for parallel coordinates
-    df = pd.DataFrame(combined_X, columns=['sepal length', 'sepal width', 'petal length', 'petal width'])
-    df['class'] = combined_y
-
-    # Plot parallel coordinates
-    parallel_coordinates(df, 'class', colormap=plt.get_cmap("Set2"))
-    plt.title('Parallel Coordinates: Best vs Worst Decision Boundaries')
+    plt.subplot(122)
+    parallel_coordinates(df_worst, 'class', color=('#1f77b4', '#ff7f0e', '#2ca02c'))  # Same class colors
+    plt.title('Parallel Coordinates: Worst Decision Boundary')
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
     plt.tight_layout()
