@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import AdaBoostClassifier
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, confusion_matrix
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from pandas.plotting import parallel_coordinates
@@ -36,20 +36,26 @@ if __name__ == "__main__":
         accuracy = accuracy_score(y_test, y_pred)
         accuracies.append(accuracy)
 
-        classifiers.append((clf, X_train, y_train))
+        classifiers.append((clf, X_train, y_train, X_test, y_test))
 
     # Find best and worst runs
     best_run = np.argmax(accuracies)
     worst_run = np.argmin(accuracies)
 
+    # Print confusion matrix for the best run
+    best_clf, best_X_train, best_y_train, best_X_test, best_y_test = classifiers[best_run]
+    best_y_pred = best_clf.predict(best_X_test)
+    cm = confusion_matrix(best_y_test, best_y_pred)
+    print("Confusion Matrix for Best Run:")
+    print(cm)
+
     # Plot parallel coordinates for the best run
     plt.figure(figsize=(14, 7))
 
-    best_clf, best_X, best_y = classifiers[best_run]
-    best_y_named = map_class_names(best_y)  # Map class labels to names
+    best_y_named = map_class_names(best_y_train)  # Map class labels to names
 
     # Create DataFrame for parallel coordinates for best classifier
-    df_best = pd.DataFrame(best_X, columns=['sepal length', 'sepal width', 'petal length', 'petal width'])
+    df_best = pd.DataFrame(best_X_train, columns=['sepal length', 'sepal width', 'petal length', 'petal width'])
     df_best['class'] = best_y_named
 
     plt.subplot(121)
@@ -58,7 +64,7 @@ if __name__ == "__main__":
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
     # Plot parallel coordinates for the worst run
-    worst_clf, worst_X, worst_y = classifiers[worst_run]
+    worst_clf, worst_X, worst_y, _, _ = classifiers[worst_run]
     worst_y_named = map_class_names(worst_y)  # Map class labels to names
 
     # Create DataFrame for parallel coordinates for worst classifier
