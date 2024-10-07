@@ -13,8 +13,8 @@ if __name__ == "__main__":
     iris = load_iris()
     X, y = iris.data, iris.target
 
-    # Number of runs
-    n_runs = 1000
+    # Get number of runs from user
+    n_runs = int(input("Enter the number of runs: "))
     accuracies = []
     roc_curves = []
 
