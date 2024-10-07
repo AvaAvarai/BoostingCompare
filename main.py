@@ -42,16 +42,18 @@ if __name__ == "__main__":
     best_run = np.argmax(accuracies)
     worst_run = np.argmin(accuracies)
 
-    # Print confusion matrix for the best run
-    best_clf, best_X_train, best_y_train, best_X_test, best_y_test = classifiers[best_run]
-    best_y_pred = best_clf.predict(best_X_test)
-    cm = confusion_matrix(best_y_test, best_y_pred)
-    print("Confusion Matrix for Best Run:")
+    # Train classifier on all data and print confusion matrix
+    clf_all = AdaBoostClassifier(n_estimators=50, random_state=42, algorithm='SAMME')
+    clf_all.fit(X, y)
+    y_pred_all = clf_all.predict(X)
+    cm = confusion_matrix(y, y_pred_all)
+    print("Confusion Matrix for Classifier trained on all data:")
     print(cm)
 
     # Plot parallel coordinates for the best run
     plt.figure(figsize=(14, 7))
 
+    best_clf, best_X_train, best_y_train, best_X_test, best_y_test = classifiers[best_run]
     best_y_named = map_class_names(best_y_train)  # Map class labels to names
 
     # Create DataFrame for parallel coordinates for best classifier
