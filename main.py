@@ -5,6 +5,7 @@ from sklearn.ensemble import AdaBoostClassifier
 from sklearn.metrics import accuracy_score, roc_curve, auc
 from sklearn.preprocessing import label_binarize
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 
 if __name__ == "__main__":
@@ -13,16 +14,16 @@ if __name__ == "__main__":
     X, y = iris.data, iris.target
 
     # Number of runs
-    n_runs = 10
+    n_runs = 1000
     accuracies = []
     roc_curves = []
 
-    for _ in range(n_runs):
+    for _ in tqdm(range(n_runs), desc="Running iterations"):
         # Split the data
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
 
-        # Create and train the AdaBoost classifier
-        clf = AdaBoostClassifier(n_estimators=50, random_state=42)
+        # Create and train the AdaBoost classifier with SAMME algorithm
+        clf = AdaBoostClassifier(n_estimators=50, random_state=42, algorithm='SAMME')
         clf.fit(X_train, y_train)
 
         # Predict and calculate accuracy
