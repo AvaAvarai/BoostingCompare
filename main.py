@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.datasets import load_iris
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, StratifiedKFold
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix
 import matplotlib.pyplot as plt
@@ -23,13 +23,31 @@ if __name__ == "__main__":
     accuracies = []
     classifiers = []
 
-    for _ in tqdm(range(n_runs), desc="Running iterations"):
-        # Split the data
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
+    # Create a StratifiedKFold object
+    skf = StratifiedKFold(n_splits=n_runs, shuffle=True, random_state=42)
+
+    for train_index, test_index in tqdm(skf.split(X, y), total=n_runs, desc="Running iterations"):
+        # Split the data using the indices from StratifiedKFold
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+
+        # Print the number of cases per class for train and test sets
+        print("\nNumber of cases per class:")
+        print("Train set:")
+        for class_name, count in zip(['setosa', 'versicolor', 'virginica'], np.bincount(y_train)):
+            print(f"{class_name}: {count}")
+        print("Test set:")
+        for class_name, count in zip(['setosa', 'versicolor', 'virginica'], np.bincount(y_test)):
+            print(f"{class_name}: {count}")
 
         # Create and train the AdaBoost classifier with SAMME algorithm
         clf = AdaBoostClassifier(n_estimators=50, random_state=42, algorithm='SAMME')
         clf.fit(X_train, y_train)
+
+        # Print the weak classifiers used
+        print("\nWeak classifiers used:")
+        for i, estimator in enumerate(clf.estimators_):
+            print(f"Estimator {i + 1}: {estimator}")
 
         # Predict and calculate accuracy
         y_pred = clf.predict(X_test)
@@ -60,8 +78,20 @@ if __name__ == "__main__":
     df_best = pd.DataFrame(best_X_train, columns=['sepal length', 'sepal width', 'petal length', 'petal width'])
     df_best['class'] = best_y_named
 
+    # Predict on training data to identify misclassified cases
+    best_y_pred = best_clf.predict(best_X_train)
+    df_best['misclassified'] = best_y_pred != best_y_train
+
     plt.subplot(121)
-    parallel_coordinates(df_best, 'class', color=('#1f77b4', '#ff7f0e', '#2ca02c'))  # Fixed class colors
+    for class_name in ['setosa', 'versicolor', 'virginica']:
+        class_data = df_best[df_best['class'] == class_name]
+        correct = class_data[~class_data['misclassified']]
+        incorrect = class_data[class_data['misclassified']]
+        
+        parallel_coordinates(correct, 'class', color={'setosa': '#1f77b4', 'versicolor': '#ff7f0e', 'virginica': '#2ca02c'}[class_name], alpha=0.7)
+        if not incorrect.empty:
+            parallel_coordinates(incorrect, 'class', color='yellow', alpha=1.0)
+
     plt.title('Parallel Coordinates: Best Decision Boundary')
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
@@ -73,8 +103,20 @@ if __name__ == "__main__":
     df_worst = pd.DataFrame(worst_X, columns=['sepal length', 'sepal width', 'petal length', 'petal width'])
     df_worst['class'] = worst_y_named
 
+    # Predict on training data to identify misclassified cases
+    worst_y_pred = worst_clf.predict(worst_X)
+    df_worst['misclassified'] = worst_y_pred != worst_y
+
     plt.subplot(122)
-    parallel_coordinates(df_worst, 'class', color=('#1f77b4', '#ff7f0e', '#2ca02c'))  # Same class colors
+    for class_name in ['setosa', 'versicolor', 'virginica']:
+        class_data = df_worst[df_worst['class'] == class_name]
+        correct = class_data[~class_data['misclassified']]
+        incorrect = class_data[class_data['misclassified']]
+        
+        parallel_coordinates(correct, 'class', color={'setosa': '#1f77b4', 'versicolor': '#ff7f0e', 'virginica': '#2ca02c'}[class_name], alpha=0.7)
+        if not incorrect.empty:
+            parallel_coordinates(incorrect, 'class', color='yellow', alpha=1.0)
+
     plt.title('Parallel Coordinates: Worst Decision Boundary')
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
